@@ -14,9 +14,9 @@ import br.edu.atitus.currency_service.entities.CurrencyEntity;
 import br.edu.atitus.currency_service.repositories.CurrencyRepository;
 
 @RestController
-@RequestMapping ("currency")
+@RequestMapping("currency")
 public class CurrencyController {
-
+	
 	private final CurrencyRepository repository;
 	private final CurrencyBCClient currencyBCClient;
 	private final CacheManager cacheManager;
@@ -28,22 +28,23 @@ public class CurrencyController {
 		this.cacheManager = cacheManager;
 	}
 	
-	@Value ("${server.port}")
+	@Value("${server.port}")
 	private int serverPort;
 	
-	@GetMapping ("/{value}/{source}/{target}")
-	public ResponseEntity <CurrencyEntity> getCurrency(
+	@GetMapping("/{value}/{source}/{target}")
+	public ResponseEntity<CurrencyEntity> getCurrency(
 			@PathVariable double value,
 			@PathVariable String source,
 			@PathVariable String target
-			) throws Exception{
+			) throws Exception {
 		
 		source = source.toUpperCase();
 		target = target.toUpperCase();
 		String dataSource = "None";
+		
 		String nameCache = "Currency";
-		String keyCache = source + target; 
-				
+		String keyCache = source + target;
+		
 		CurrencyEntity currency = cacheManager.getCache(nameCache).get(keyCache, CurrencyEntity.class);
 		
 		if (currency != null) {
@@ -52,40 +53,40 @@ public class CurrencyController {
 			currency = new CurrencyEntity();
 			currency.setSource(source);
 			currency.setTarget(target);
-			
 			if (source.equals(target)) {
 				currency.setConversionRate(1);
 			} else {
-				try {double currencySource = 1;
-				double currencyTarget = 1;
-				if (!source.equals("BRL")) {
-					CurrencyBCResponse response = currencyBCClient.getCurrency(source);
-					if (response.getValue().isEmpty()) throw new Exception("Currency not found for " + source);
-					currencySource = response.getValue().get(0).getCotacaoVenda();
-				}
-				if (!target.equals("BRL")) {
-					CurrencyBCResponse response = currencyBCClient.getCurrency(target);
-					if (response.getValue().isEmpty()) throw new Exception("Currency not found for " + target);
-					currencyTarget = response.getValue().get(0).getCotacaoVenda();
-				}
-				currency.setConversionRate(currencySource / currencyTarget);
-				dataSource = "API BCB";
-					
+				try {
+					double curSource = 1;
+					double curTarget = 1;
+					if (!source.equals("BRL")) {
+						CurrencyBCResponse resp = currencyBCClient.getCurrency(source);
+						if (resp.getValue().isEmpty()) throw new Exception("Currency not found for " + source);
+						curSource = resp.getValue().get(0).getCotacaoVenda();
+					}
+					if (!target.equals("BRL")) {
+						CurrencyBCResponse resp = currencyBCClient.getCurrency(target);
+						if (resp.getValue().isEmpty()) throw new Exception("Currency not found for " + target);
+						curTarget = resp.getValue().get(0).getCotacaoVenda();
+					}
+					currency.setConversionRate(curSource / curTarget);
+					dataSource = "API BCB";
 				} catch (Exception e) {
 					currency = repository.findBySourceAndTarget(source, target)
 							.orElseThrow(() -> new Exception("Currency Unsupported"));
 					dataSource = "Local Database";
 				}
 			}
+			
 			cacheManager.getCache(nameCache).put(keyCache, currency);
 		}
-		
-		
 		
 		currency.setConvertedValue(value * currency.getConversionRate());
 		currency.setEnviroment("Currency-service running on port: " + serverPort + " - DataSource: " + dataSource);
 		
 		return ResponseEntity.ok(currency);
+		
 	}
 	
+
 }

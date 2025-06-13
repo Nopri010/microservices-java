@@ -43,9 +43,9 @@ public class OpenProductController {
 		ProductEntity product = cacheManager.getCache(nameCache).get(keyCache, ProductEntity.class);
 
 		if (product == null) {
-			product = repository.findById(idProduct).orElseThrow(() -> new Exception("Product Unsupported"));
+			product = repository.findById(idProduct).orElseThrow(() -> new Exception("Product not found"));
 
-			product.setEnvironment("Product-service running on port: " + serverPort);
+			product.setEnviroment("Product-service running on Port: " + serverPort);
 
 			if (product.getCurrency().equals(targetCurrency)) {
 				product.setConvertedPrice(product.getPrice());
@@ -54,16 +54,17 @@ public class OpenProductController {
 						targetCurrency);
 				if (currency != null) {
 					product.setConvertedPrice(currency.getConvertedValue());
-					product.setEnvironment(product.getEnvironment() + " - " + currency.getEnviroment());
+					product.setEnviroment(product.getEnviroment() + " - " + currency.getEnviroment());
 					
 					cacheManager.getCache(nameCache).put(keyCache, product);
 				} else {
 					product.setConvertedPrice(-1);
-					product.setEnvironment(product.getEnvironment() + "- Currency unavaliable");
+					product.setEnviroment(product.getEnviroment() + " - Currency unavalaible");
 				}
 			}
+			
 		} else {
-			product.setEnvironment("Product-service running on port: " + serverPort + "- DataSource: cache");
+			product.setEnviroment("Product-service running on Port: " + serverPort + " - DataSource: cache" );
 		}
 		return ResponseEntity.ok(product);
 	}
